@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <title>🌌 Dashboard Galáxia - Monitor de Sistema</title>
+</head>
+<body>
+    <!-- Fundo de galáxia com animação -->
+    <div class="galaxy-background">
+        <div class="stars"></div>
+        <div class="nebula nebula-1"></div>
+        <div class="nebula nebula-2"></div>
+        <div class="nebula nebula-3"></div>
+        <canvas id="galaxy-canvas"></canvas>
+    </div>
+
+    <!-- Partículas interativas -->
+    <div id="particles-container"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1 class="title-gradient">🌌 Dashboard Galáxia</h1>
+            <p class="subtitle">Monitoramento em Tempo Real do Sistema</p>
+        </div>
+        
+        <div class="dashboard">
+            <!-- Uso de CPU -->
+            <div class="card card-cpu">
+                <div class="card-header">
+                    <span class="card-icon">⚡</span>
+                    <h2>Uso de CPU</h2>
+                </div>
+                <div class="metric">
+                    <span class="value" id="cpu-percent">0</span>
+                    <span class="unit">%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cpu-progress"></div>
+                </div>
+                <p class="status" id="cpu-status">Atualizando...</p>
+                <div class="card-glow"></div>
+            </div>
+
+            <!-- Núcleos de CPU -->
+            <div class="card card-cores">
+                <div class="card-header">
+                    <span class="card-icon">🔧</span>
+                    <h2>Núcleos</h2>
+                </div>
+                <div class="metric">
+                    <span class="value" id="cpu-cores">0</span>
+                </div>
+                <p class="info">Processadores físicos</p>
+                <div class="card-glow"></div>
+            </div>
+
+            <!-- Uso de Memória -->
+            <div class="card card-memory">
+                <div class="card-header">
+                    <span class="card-icon">💾</span>
+                    <h2>Memória RAM</h2>
+                </div>
+                <div class="metric">
+                    <span class="value" id="memory-percent">0</span>
+                    <span class="unit">%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="memory-progress"></div>
+                </div>
+                <p class="status" id="memory-status">Atualizando...</p>
+                <div class="card-glow"></div>
+            </div>
+
+            <!-- Processos em Execução -->
+            <div class="card card-process">
+                <div class="card-header">
+                    <span class="card-icon">📊</span>
+                    <h2>Processos</h2>
+                </div>
+                <div class="metric">
+                    <span class="value" id="process-count">0</span>
+                </div>
+                <p class="info">Processos ativos</p>
+                <div class="card-glow"></div>
+            </div>
+        </div>
+
+        <!-- Status do Servidor -->
+        <div class="server-status" id="server-status-container">
+            <div class="status-indicator" id="status-indicator"></div>
+            <p id="server-status">Conectando ao servidor...</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ============ PARTÍCULAS INTERATIVAS ============
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = (Math.random() - 0.5) * 8;
+                this.life = 1;
+                this.decay = Math.random() * 0.02 + 0.015;
+                this.size = Math.random() * 8 + 4;
+                this.color = ['#9c27b0', '#00bcd4', '#ff006e', '#76ff03'][Math.floor(Math.random() * 4)];
+                
+                this.element = document.createElement('div');
+                this.element.className = 'particle';
+                this.element.style.left = x + 'px';
+                this.element.style.top = y + 'px';
+                this.element.style.width = this.size + 'px';
+                this.element.style.height = this.size + 'px';
+                this.element.style.backgroundColor = this.color;
+                this.element.style.boxShadow = `0 0 ${this.size}px ${this.color}`;
+                document.getElementById('particles-container').appendChild(this.element);
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.15; // Gravidade
+                this.life -= this.decay;
+
+                this.element.style.left = this.x + 'px';
+                this.element.style.top = this.y + 'px';
+                this.element.style.opacity = this.life;
+
+                return this.life > 0;
+            }
+        }
+
+        const particles = [];
+
+        // Criar partículas ao clicar
+        document.addEventListener('click', (e) => {
+            for (let i = 0; i < 12; i++) {
+                particles.push(new Particle(e.clientX, e.clientY));
+            }
+        });
+
+        // Efeito de partículas ao passar o mouse nos cards
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                if (Math.random() > 0.7) {
+                    const rect = card.getBoundingClientRect();
+                    particles.push(new Particle(e.clientX, e.clientY));
+                }
+            });
+        });
+
+        // Animar partículas
+        function animateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                if (!particles[i].update()) {
+                    particles[i].element.remove();
+                    particles.splice(i, 1);
+                }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        // ============ EFEITO DE BRILHO NO MOUSE ============
+        const container = document.querySelector('.container');
+        
+        document.addEventListener('mousemove', (e) => {
+            const x = e.clientX / window.innerWidth;
+            const y = e.clientY / window.innerHeight;
+            
+            // Atualizar nebulosas com movimento do mouse
+            const nebulas = document.querySelectorAll('.nebula');
+            nebulas.forEach((nebula, index) => {
+                const moveX = x * (index + 1) * 10;
+                const moveY = y * (index + 1) * 10;
+                nebula.style.transform = `translate(${moveX}px, ${moveY}px)`;
+            });
+        });
+
+        // ============ PULSO NOS VALORES QUANDO ATUALIZAM ============
+        function pulseElement(element) {
+            anime({
+                targets: element,
+                scale: [1, 1.15, 1],
+                duration: 500,
+                easing: 'easeOutElastic(1, .6)'
+            });
+        }
+
+        // ============ GALÁXIA COM THREE.JS ============
+        function createGalaxyBackground() {
+            const canvas = document.getElementById('galaxy-canvas');
+            if (!canvas) return;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            camera.position.z = 5;
+
+            // Criar partículas de galáxia
+            const particleCount = 800;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 100;
+                positions[i + 1] = (Math.random() - 0.5) * 100;
+                positions[i + 2] = (Math.random() - 0.5) * 100;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const material = new THREE.PointsMaterial({
+                color: 0x9c27b0,
+                size: 0.2,
+                sizeAttenuation: true,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+
+            // Animação
+            function animate() {
+                requestAnimationFrame(animate);
+                points.rotation.x += 0.0001;
+                points.rotation.y += 0.0003;
+                renderer.render(scene, camera);
+            }
+
+            animate();
+
+            // Responsividade
+            window.addEventListener('resize', () => {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height);
+            });
+        }
+
+        createGalaxyBackground();
+
+        // ============ API E DASHBOARD ============
+        const API_URL = 'http://localhost:5000/api/cpu';
+
+        async function fetchCPUData() {
+            try {
+                const response = await fetch(API_URL);
+                
+                if (!response.ok) {
+                    throw new Error('Erro na requisição');
+                }
+
+                const data = await response.json();
+                updateDashboard(data);
+                updateServerStatus(true);
+            } catch (error) {
+                console.error('Erro ao buscar dados:', error);
+                updateServerStatus(false);
+            }
+        }
+
+        function updateDashboard(data) {
+            // Atualiza CPU
+            const cpuPercent = Math.round(data.percent);
+            const cpuElement = document.getElementById('cpu-percent');
+            const previousCpu = parseInt(cpuElement.textContent);
+
+            if (cpuPercent !== previousCpu) {
+                pulseElement(cpuElement);
+                anime({
+                    targets: '#cpu-percent',
+                    innerHTML: [previousCpu, cpuPercent],
+                    round: 1,
+                    duration: 800,
+                    easing: 'easeOutQuad'
+                });
+            }
+
+            document.getElementById('cpu-progress').style.width = cpuPercent + '%';
+            document.getElementById('cpu-status').textContent = 
+                cpuPercent < 30 ? 'Baixo' : 
+                cpuPercent < 70 ? 'Normal' : 'Alto';
+
+            // Atualiza Núcleos
+            document.getElementById('cpu-cores').textContent = data.cores;
+
+            // Atualiza Memória
+            const memoryPercent = Math.round(data.memory_percent);
+            const memElement = document.getElementById('memory-percent');
+            const previousMem = parseInt(memElement.textContent);
+
+            if (memoryPercent !== previousMem) {
+                pulseElement(memElement);
+                anime({
+                    targets: '#memory-percent',
+                    innerHTML: [previousMem, memoryPercent],
+                    round: 1,
+                    duration: 800,
+                    easing: 'easeOutQuad'
+                });
+            }
+
+            document.getElementById('memory-progress').style.width = memoryPercent + '%';
+            document.getElementById('memory-status').textContent = 
+                memoryPercent < 30 ? 'Baixo' : 
+                memoryPercent < 70 ? 'Normal' : 'Alto';
+
+            // Atualiza Processos
+            document.getElementById('process-count').textContent = data.process_count;
+        }
+
+        function updateServerStatus(isConnected) {
+            const statusIndicator = document.getElementById('status-indicator');
+            const statusElement = document.getElementById('server-status');
+            
+            if (isConnected) {
+                statusIndicator.classList.add('connected');
+                statusIndicator.classList.remove('disconnected');
+                statusElement.textContent = '✓ Servidor conectado - Sistema operacional';
+            } else {
+                statusIndicator.classList.add('disconnected');
+                statusIndicator.classList.remove('connected');
+                statusElement.textContent = '✗ Servidor desconectado - Inicie o Python: python script.py';
+            }
+        }
+
+        // Atualiza dados a cada 1 segundo
+        setInterval(fetchCPUData, 1000);
+
+        // Faz primeira requisição imediatamente
+        fetchCPUData();
+    </script>
+</body>
+</html>
